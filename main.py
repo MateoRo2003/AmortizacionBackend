@@ -107,7 +107,7 @@ def api_calcular():
                 cftea = t.get("CFTEA")
                 break
 
-    if tna is None or tea is None or cftea is None:
+    if tna is None:
         scraper = scrapers_dict[banco]
         tasas = scraper.obtener_tasas()
         tna = tasas.get("TNA")
