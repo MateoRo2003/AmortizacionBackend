@@ -17,6 +17,7 @@ from scrapers.patagonia import PatagoniaScraperOptimized
 app = Flask(__name__)
 CORS(app, origins=["https://amortizacion-fronted.vercel.app"])
 
+# Scrapers
 scrapers_dict = {
     "Santander": SantanderScraper(),
     "BNA": BNAScraperOptimized(),
@@ -31,6 +32,7 @@ scrapers_dict = {
 
 TASAS_FILE = "tasas.json"
 
+# Funciones auxiliares
 def cargar_tasas():
     if not os.path.exists(TASAS_FILE):
         return []
@@ -52,30 +54,50 @@ def guardar_tasa_individual(banco, tna, tea, cftea):
     with open(TASAS_FILE, "w", encoding="utf-8") as f:
         json.dump(tasas, f, indent=4, ensure_ascii=False)
 
-def generar_tabla_amortizacion(monto, n_cuotas, tna):
-    saldo = monto
+def generar_tabla_amortizacion(monto, n_cuotas, tna, sistema='frances'):
     i = (tna / 100) / 12
-    cuota_fija = monto * i / (1 - (1 + i) ** -n_cuotas)
     tabla = []
-    for n in range(1, n_cuotas + 1):
-        interes = saldo * i
-        amortizacion = cuota_fija - interes
-        saldo -= amortizacion
-        tabla.append({
-            "Cuota": n,
-            "Cuota_total": round(cuota_fija, 2),
-            "Interes": round(interes, 2),
-            "Amortizacion": round(amortizacion, 2),
-            "Saldo": round(max(saldo, 0), 2)
-        })
+
+    if sistema == 'frances':
+        # Sistema Francés: cuota constante
+        cuota_fija = monto * i / (1 - (1 + i) ** -n_cuotas)
+        saldo = monto
+        for n in range(1, n_cuotas + 1):
+            interes = saldo * i
+            amortizacion = cuota_fija - interes
+            saldo -= amortizacion
+            tabla.append({
+                "Cuota": n,
+                "Cuota_total": round(cuota_fija, 2),
+                "Interes": round(interes, 2),
+                "Amortizacion": round(amortizacion, 2),
+                "Saldo": round(max(saldo, 0), 2)
+            })
+    else:
+        # Sistema Alemán: amortización constante
+        amort_const = monto / n_cuotas
+        saldo = monto
+        for n in range(1, n_cuotas + 1):
+            interes = saldo * i
+            cuota_total = amort_const + interes
+            saldo -= amort_const
+            tabla.append({
+                "Cuota": n,
+                "Cuota_total": round(cuota_total, 2),
+                "Interes": round(interes, 2),
+                "Amortizacion": round(amort_const, 2),
+                "Saldo": round(max(saldo, 0), 2)
+            })
     return tabla
 
+# Endpoint principal
 @app.route("/api/calcular", methods=["POST"])
 def api_calcular():
     data = request.json
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
     banco = data.get("banco")
+    sistema = data.get("sistema", "frances")
 
     if banco not in scrapers_dict:
         return jsonify({"error": "Banco no válido"}), 400
@@ -88,7 +110,7 @@ def api_calcular():
         tea = tasa.get("TEA")
         cftea = tasa.get("CFTEA")
     else:
-        # Solo scrapea si no existe
+        # Scraping solo si no existe
         scraper = scrapers_dict[banco]
         tasas = scraper.obtener_tasas()
         tna = tasas.get("TNA")
@@ -100,13 +122,14 @@ def api_calcular():
     if not tna:
         return jsonify({"error": "No se pudo obtener TNA del banco"}), 500
 
-    tabla = generar_tabla_amortizacion(monto, n_cuotas, tna)
+    tabla = generar_tabla_amortizacion(monto, n_cuotas, tna, sistema)
 
     return jsonify({
         "Banco": banco,
         "TNA": tna,
         "TEA": tea,
         "CFTEA": cftea,
+        "Sistema": sistema,
         "Tabla": tabla
     })
 
