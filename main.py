@@ -92,6 +92,7 @@ def api_calcular():
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
     banco = data.get("banco")
+    sistema = data.get("sistema", "frances")
 
     if banco not in scrapers_dict:
         return jsonify({"error": "Banco no válido"}), 400
@@ -119,12 +120,13 @@ def api_calcular():
     if tna is None:
         return jsonify({"error": "No se pudo obtener TNA del banco"}), 500
 
-    tabla = generar_tabla_amortizacion(monto, n_cuotas, tna)
+    tabla = generar_tabla_amortizacion(monto, n_cuotas, tna, sistema)
 
     return jsonify({
         "Banco": banco,
         "TNA": tna,
         "TEA": tea,
+        "Sistema": sistema,
         "CFTEA": cftea,
         "Tabla": tabla
     })
