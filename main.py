@@ -17,13 +17,13 @@ from scrapers.patagonia import PatagoniaScraperOptimized
 
 app = Flask(__name__)
 
-# ⚡ Configurar CORS para que Vercel pueda consumir la API
+
 CORS(
     app,
     origins=["https://amortizacion-fronted.vercel.app"],
     methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
-) # <--- reemplazá por tu dominio real
+) 
 
 scrapers_dict = {
     "Santander": SantanderScraper(),
@@ -84,7 +84,7 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna):
 
 @app.route("/api/calcular", methods=["POST", "OPTIONS"])
 def api_calcular():
-    # ⚡ Responder a la preflight request OPTIONS
+    # Responder a la preflight request OPTIONS
     if request.method == "OPTIONS":
         return "", 200
 
