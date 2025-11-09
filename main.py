@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # ✅ Import CORS
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import json
 import os
 from datetime import datetime, timedelta
@@ -15,35 +15,22 @@ from scrapers.naranjax import NaranjaXScraper
 from scrapers.santander import SantanderScraper
 from scrapers.patagonia import PatagoniaScraperOptimized
 
-# Sirve todo desde la raíz
-app = Flask(__name__, static_folder=".", template_folder=".")
+app = Flask(__name__)
 
-# ⚡ Configurar CORS
-# Cambiá "https://tufrontend.vercel.app" por tu dominio real de Vercel
-CORS(app, origins=["https://tufrontend.vercel.app"])
+# ⚡ Configurar CORS para que Vercel pueda consumir la API
+CORS(app, origins=["https://amortizacion-fronted.vercel.app/"])  # <--- reemplazá por tu dominio real
 
-@app.route('/<path:filename>')
-def serve_root_files(filename):
-    return send_from_directory('.', filename)
-
-def generar_tabla_amortizacion(monto, n_cuotas, tna):
-    saldo = monto
-    i = (tna / 100) / 12
-    cuota_fija = monto * i / (1 - (1 + i) ** -n_cuotas)
-
-    tabla = []
-    for n in range(1, n_cuotas + 1):
-        interes = saldo * i
-        amortizacion = cuota_fija - interes
-        saldo -= amortizacion
-        tabla.append({
-            "Cuota": n,
-            "Cuota_total": round(cuota_fija, 2),
-            "Interes": round(interes, 2),
-            "Amortizacion": round(amortizacion, 2),
-            "Saldo": round(max(saldo, 0), 2)
-        })
-    return tabla
+scrapers_dict = {
+    "Santander": SantanderScraper(),
+    "BNA": BNAScraperOptimized(),
+    "Macro": MacroScraper(),
+    "BCRA": BCRAScraper(),
+    "NaranjaX": NaranjaXScraper(),
+    "BBVA": BBVAScraper(),
+    "Galicia": GaliciaScraper(),
+    "MercadoPago": MercadoPagoScraper(),
+    "Patagonia": PatagoniaScraperOptimized()
+}
 
 def cargar_tasas():
     file_path = "tasas.json"
@@ -58,21 +45,36 @@ def cargar_tasas():
         pass
     return None
 
-scrapers_dict = {
-    "Santander": SantanderScraper(),
-    "BNA": BNAScraperOptimized(),
-    "Macro": MacroScraper(),
-    "BCRA": BCRAScraper(),
-    "NaranjaX": NaranjaXScraper(),
-    "BBVA": BBVAScraper(),
-    "Galicia": GaliciaScraper(),
-    "MercadoPago": MercadoPagoScraper(),
-    "Patagonia": PatagoniaScraperOptimized()
-}
+def guardar_tasa_individual(banco, tna, tea, cftea):
+    file_path = "tasas.json"
+    tasas = cargar_tasas() or []
+    tasas = [t for t in tasas if t["Banco"] != banco]
+    tasas.append({
+        "Banco": banco,
+        "TNA": tna,
+        "TEA": tea,
+        "CFTEA": cftea
+    })
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(tasas, f, indent=4, ensure_ascii=False)
 
-@app.route("/")
-def home():
-    return send_from_directory('.', 'index.html')
+def generar_tabla_amortizacion(monto, n_cuotas, tna):
+    saldo = monto
+    i = (tna / 100) / 12
+    cuota_fija = monto * i / (1 - (1 + i) ** -n_cuotas)
+    tabla = []
+    for n in range(1, n_cuotas + 1):
+        interes = saldo * i
+        amortizacion = cuota_fija - interes
+        saldo -= amortizacion
+        tabla.append({
+            "Cuota": n,
+            "Cuota_total": round(cuota_fija, 2),
+            "Interes": round(interes, 2),
+            "Amortizacion": round(amortizacion, 2),
+            "Saldo": round(max(saldo, 0), 2)
+        })
+    return tabla
 
 @app.route("/api/calcular", methods=["POST"])
 def api_calcular():
@@ -116,19 +118,6 @@ def api_calcular():
         "CFTEA": cftea,
         "Tabla": tabla
     })
-
-def guardar_tasa_individual(banco, tna, tea, cftea):
-    file_path = "tasas.json"
-    tasas = cargar_tasas() or []
-    tasas = [t for t in tasas if t["Banco"] != banco]
-    tasas.append({
-        "Banco": banco,
-        "TNA": tna,
-        "TEA": tea,
-        "CFTEA": cftea
-    })
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(tasas, f, indent=4, ensure_ascii=False)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
