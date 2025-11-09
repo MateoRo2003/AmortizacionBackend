@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS  # ✅ Import CORS
 import json
 import os
 from datetime import datetime, timedelta
@@ -16,6 +17,10 @@ from scrapers.patagonia import PatagoniaScraperOptimized
 
 # Sirve todo desde la raíz
 app = Flask(__name__, static_folder=".", template_folder=".")
+
+# ⚡ Configurar CORS
+# Cambiá "https://tufrontend.vercel.app" por tu dominio real de Vercel
+CORS(app, origins=["https://tufrontend.vercel.app"])
 
 @app.route('/<path:filename>')
 def serve_root_files(filename):
@@ -44,7 +49,6 @@ def cargar_tasas():
     file_path = "tasas.json"
     if not os.path.exists(file_path):
         return None
-
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -52,9 +56,7 @@ def cargar_tasas():
                 return data
     except:
         pass
-
     return None
-
 
 scrapers_dict = {
     "Santander": SantanderScraper(),
@@ -85,7 +87,6 @@ def api_calcular():
     tasas_guardadas = cargar_tasas()
     tna = tea = cftea = None
 
-    # Buscar en tasas.json
     if tasas_guardadas:
         for t in tasas_guardadas:
             if t["Banco"] == banco:
@@ -94,16 +95,12 @@ def api_calcular():
                 cftea = t.get("CFTEA")
                 break
 
-    # Si faltan datos, scrapeamos
     if tna is None or tea is None or cftea is None:
         scraper = scrapers_dict[banco]
         tasas = scraper.obtener_tasas()
-
         tna = tasas.get("TNA")
         tea = tasas.get("TEA")
         cftea = tasas.get("CFTEA")
-
-        # Guardar para la próxima
         if tna:
             guardar_tasa_individual(banco, tna, tea, cftea)
 
@@ -123,20 +120,16 @@ def api_calcular():
 def guardar_tasa_individual(banco, tna, tea, cftea):
     file_path = "tasas.json"
     tasas = cargar_tasas() or []
-
     tasas = [t for t in tasas if t["Banco"] != banco]
-
     tasas.append({
         "Banco": banco,
         "TNA": tna,
         "TEA": tea,
         "CFTEA": cftea
     })
-
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(tasas, f, indent=4, ensure_ascii=False)
 
-
 if __name__ == "__main__":
-     port = int(os.environ.get("PORT", 5000))
-     app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
