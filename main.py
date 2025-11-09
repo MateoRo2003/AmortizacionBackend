@@ -18,7 +18,12 @@ from scrapers.patagonia import PatagoniaScraperOptimized
 app = Flask(__name__)
 
 # ⚡ Configurar CORS para que Vercel pueda consumir la API
-CORS(app, origins=["https://amortizacion-fronted.vercel.app/"])  # <--- reemplazá por tu dominio real
+CORS(
+    app,
+    origins=["https://amortizacion-fronted.vercel.app"],
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+) # <--- reemplazá por tu dominio real
 
 scrapers_dict = {
     "Santander": SantanderScraper(),
