@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
-from datetime import datetime, timedelta
 
 # Importación de scrapers
 from scrapers.bbva import BBVAScraper
@@ -16,14 +15,7 @@ from scrapers.santander import SantanderScraper
 from scrapers.patagonia import PatagoniaScraperOptimized
 
 app = Flask(__name__)
-
-
-CORS(
-    app,
-    origins=["https://amortizacion-fronted.vercel.app"],
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-) 
+CORS(app, origins=["https://amortizacion-fronted.vercel.app"])
 
 scrapers_dict = {
     "Santander": SantanderScraper(),
@@ -37,22 +29,19 @@ scrapers_dict = {
     "Patagonia": PatagoniaScraperOptimized()
 }
 
+TASAS_FILE = "tasas.json"
+
 def cargar_tasas():
-    file_path = "tasas.json"
-    if not os.path.exists(file_path):
-        return None
+    if not os.path.exists(TASAS_FILE):
+        return []
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, list) and len(data) > 0:
-                return data
+        with open(TASAS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
     except:
-        pass
-    return None
+        return []
 
 def guardar_tasa_individual(banco, tna, tea, cftea):
-    file_path = "tasas.json"
-    tasas = cargar_tasas() or []
+    tasas = cargar_tasas()
     tasas = [t for t in tasas if t["Banco"] != banco]
     tasas.append({
         "Banco": banco,
@@ -60,7 +49,7 @@ def guardar_tasa_individual(banco, tna, tea, cftea):
         "TEA": tea,
         "CFTEA": cftea
     })
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(TASAS_FILE, "w", encoding="utf-8") as f:
         json.dump(tasas, f, indent=4, ensure_ascii=False)
 
 def generar_tabla_amortizacion(monto, n_cuotas, tna):
@@ -81,13 +70,8 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna):
         })
     return tabla
 
-
-@app.route("/api/calcular", methods=["POST", "OPTIONS"])
+@app.route("/api/calcular", methods=["POST"])
 def api_calcular():
-    # Responder a la preflight request OPTIONS
-    if request.method == "OPTIONS":
-        return "", 200
-
     data = request.json
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
@@ -97,17 +81,14 @@ def api_calcular():
         return jsonify({"error": "Banco no válido"}), 400
 
     tasas_guardadas = cargar_tasas()
-    tna = tea = cftea = None
+    tasa = next((t for t in tasas_guardadas if t["Banco"] == banco), None)
 
-    if tasas_guardadas:
-        for t in tasas_guardadas:
-            if t["Banco"] == banco:
-                tna = t.get("TNA")
-                tea = t.get("TEA")
-                cftea = t.get("CFTEA")
-                break
-
-    if tna is None:
+    if tasa:
+        tna = tasa.get("TNA")
+        tea = tasa.get("TEA")
+        cftea = tasa.get("CFTEA")
+    else:
+        # Solo scrapea si no existe
         scraper = scrapers_dict[banco]
         tasas = scraper.obtener_tasas()
         tna = tasas.get("TNA")
@@ -116,7 +97,7 @@ def api_calcular():
         if tna:
             guardar_tasa_individual(banco, tna, tea, cftea)
 
-    if tna is None:
+    if not tna:
         return jsonify({"error": "No se pudo obtener TNA del banco"}), 500
 
     tabla = generar_tabla_amortizacion(monto, n_cuotas, tna)
