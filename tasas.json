@@ -1,0 +1,56 @@
+[
+    {
+        "Banco": "Santander",
+        "TNA": 103.0,
+        "TEA": 168.63,
+        "CFTEA": 227.31
+    },
+    {
+        "Banco": "Macro",
+        "TNA": 105.0,
+        "TEA": 173.62,
+        "CFTEA": 234.58
+    },
+    {
+        "Banco": "NaranjaX",
+        "TNA": 153.0,
+        "TEA": 8.0,
+        "CFTEA": 39.0
+    },
+    {
+        "Banco": "BBVA",
+        "TNA": 138.0,
+        "TEA": 269.23,
+        "CFTEA": 368.96
+    },
+    {
+        "Banco": "Galicia",
+        "TNA": 84.0,
+        "TEA": 125.22,
+        "CFTEA": 165.29
+    },
+    {
+        "Banco": "MercadoPago",
+        "TNA": 249.0,
+        "TEA": 860.0,
+        "CFTEA": 1370.28
+    },
+    {
+        "Banco": "Patagonia",
+        "TNA": 120.0,
+        "TEA": 214.07,
+        "CFTEA": 292.22
+    },
+    {
+        "Banco": "BCRA",
+        "TNA": 82.44,
+        "TEA": null,
+        "CFTEA": null
+    },
+    {
+        "Banco": "BNA",
+        "TNA": 44.62,
+        "TEA": 54.99,
+        "CFTEA": null
+    }
+]
