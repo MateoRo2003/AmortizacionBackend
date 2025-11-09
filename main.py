@@ -81,8 +81,13 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna):
         })
     return tabla
 
-@app.route("/api/calcular", methods=["POST"])
+
+@app.route("/api/calcular", methods=["POST", "OPTIONS"])
 def api_calcular():
+    # ⚡ Responder a la preflight request OPTIONS
+    if request.method == "OPTIONS":
+        return "", 200
+
     data = request.json
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
