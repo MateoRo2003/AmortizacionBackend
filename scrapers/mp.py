@@ -7,9 +7,9 @@ class MercadoPagoScraper:
         # Datos constantes
         return {
             "Banco": self.nombre_banco,
-            "TNA": 249.0,
-            "TEA": 860.0,
-            "CFTEA": 1370.28
+            "TNA": 99.0,
+            "TEA": 158.90,
+            "CFTEA": 213.24
         }
 
 if __name__ == "__main__":

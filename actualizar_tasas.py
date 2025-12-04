@@ -8,7 +8,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from scrapers.bbva import BBVAScraper
 from scrapers.bcra import BCRAScraper
-from scrapers.bna import BNAScraperOptimized
+from scrapers.bna import BNADestinoLibreScraper
 from scrapers.galicia import GaliciaScraper
 from scrapers.macro_chrome import MacroScraper
 from scrapers.mp import MercadoPagoScraper
@@ -18,7 +18,7 @@ from scrapers.patagonia import PatagoniaScraperOptimized
 
 scrapers_dict = {
     "Santander": SantanderScraper(),
-    "BNA": BNAScraperOptimized(),
+    "BNA": BNADestinoLibreScraper(),
     "Macro": MacroScraper(),
     "BCRA": BCRAScraper(),
     "NaranjaX": NaranjaXScraper(),

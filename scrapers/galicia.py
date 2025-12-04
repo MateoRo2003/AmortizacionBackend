@@ -12,44 +12,65 @@ class GaliciaScraper:
         self.url = "https://www.galicia.ar/personas/prestamos/prestamo-personal"
 
     def obtener_tasas(self):
-        # Configuración Chrome headless
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
 
-        # Iniciamos driver usando webdriver_manager
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
             options=chrome_options
         )
 
         driver.get(self.url)
-        time.sleep(5)  # esperar que cargue JS dinámico
+        time.sleep(5)
 
-        # Extraemos todo el texto visible
+        # Extraigo TODO el texto visible
         text = driver.find_element("tag name", "body").text
         driver.quit()
 
-        # Buscamos TNA, TEA y CFTEA en el texto
-        pat_tna = re.search(r"Tasa\s*Nominal\s*Anual.*?([0-9]+(?:,[0-9]+)?)", text, re.IGNORECASE)
-        pat_tea = re.search(r"Tasa\s*Efectiva\s*Anual.*?([0-9]+(?:,[0-9]+)?)", text, re.IGNORECASE)
-        pat_cftea = re.search(r"CFTEA.*?([0-9]+(?:,[0-9]+)?)", text, re.IGNORECASE)
+        # Busco SOLO el bloque de "SERVICIO PLUS GOLD y PLUS"
+        bloque = re.search(
+            r"Para clientes que tengan contratado el\s+SERVICIO\s+PLUS\s+GOLD\s+y\s+PLUS\s*:(.*?)(?:Para clientes que tengan|$)",
+            text,
+            re.IGNORECASE | re.DOTALL
+        )
+
+        if not bloque:
+            print("❌ No se encontró el bloque 'SERVICIO PLUS GOLD y PLUS'")
+            return None
+
+        bloque_texto = bloque.group(1)
+
+        # número flexible (98% / 156,56%)
+        num = r"([0-9]+(?:,[0-9]+)?)%"
+
+        # Extraer SOLO estos 3 datos
+        pat_tna = re.search(r"TNA[:\s]*" + num, bloque_texto, re.IGNORECASE)
+        pat_tea = re.search(r"TEA[:\s]*" + num, bloque_texto, re.IGNORECASE)
+        pat_cftea = re.search(r"CFTEA[:\s]*" + num, bloque_texto, re.IGNORECASE)
+
+        # Convertir a float
+        def to_float(val):
+            return float(val.replace(",", ".")) if val else None
+
+        tna = to_float(pat_tna.group(1)) if pat_tna else None
+        tea = to_float(pat_tea.group(1)) if pat_tea else None
+        cftea = to_float(pat_cftea.group(1)) if pat_cftea else None
 
         return {
             "Banco": self.nombre_banco,
-            "TNA": float(pat_tna.group(1).replace(",", ".")) if pat_tna else None,
-            "TEA": float(pat_tea.group(1).replace(",", ".")) if pat_tea else None,
-            "CFTEA": float(pat_cftea.group(1).replace(",", ".")) if pat_cftea else None
+            "TNA": tna,
+            "TEA": tea,
+            "CFTEA": cftea
         }
 
-if __name__ == "__main__":
-    import time
 
+if __name__ == "__main__":
+    start = time.time()
     scraper = GaliciaScraper()
-    start_time = time.time()  # guardamos tiempo de inicio
     tasas = scraper.obtener_tasas()
-    end_time = time.time()    # guardamos tiempo de fin
+    end = time.time()
 
     print("✅ Tasas extraídas desde Banco Galicia:", tasas)
-    print(f"⏱ Tiempo total para obtener tasas: {end_time - start_time:.2f} segundos")
+    print(f"⏱ Tiempo total: {end - start:.2f} segundos")
