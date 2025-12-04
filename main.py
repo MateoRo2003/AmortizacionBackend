@@ -6,7 +6,7 @@ import os
 # Importación de scrapers
 from scrapers.bbva import BBVAScraper
 from scrapers.bcra import BCRAScraper
-from scrapers.bna import BNAScraperOptimized
+from scrapers.bna  import BNADestinoLibreScraper
 from scrapers.galicia import GaliciaScraper
 from scrapers.macro_chrome import MacroScraper
 from scrapers.mp import MercadoPagoScraper
@@ -20,7 +20,7 @@ CORS(app, origins=["https://amortizacion-fronted.vercel.app"])
 # Scrapers
 scrapers_dict = {
     "Santander": SantanderScraper(),
-    "BNA": BNAScraperOptimized(),
+    "BNA": BNADestinoLibreScraper(),
     "Macro": MacroScraper(),
     "BCRA": BCRAScraper(),
     "NaranjaX": NaranjaXScraper(),
