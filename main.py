@@ -110,13 +110,16 @@ def api_calcular():
         tea = tasa.get("TEA")
         cftea = tasa.get("CFTEA")
     else:
-        # Scraping solo si no existe
         scraper = scrapers_dict[banco]
         tasas = scraper.obtener_tasas()
         tna = tasas.get("TNA")
         tea = tasas.get("TEA")
         cftea = tasas.get("CFTEA")
         if tna:
+            # Asegurar que los valores sean numéricos
+            tna = float(tna) if tna else None
+            tea = float(tea) if tea else None
+            cftea = float(cftea) if cftea else None
             guardar_tasa_individual(banco, tna, tea, cftea)
 
     if not tna:
@@ -124,14 +127,17 @@ def api_calcular():
 
     tabla = generar_tabla_amortizacion(monto, n_cuotas, tna, sistema)
 
-    return jsonify({
+    # Asegurar que todos los valores sean serializables
+    response_data = {
         "Banco": banco,
-        "TNA": tna,
-        "TEA": tea,
-        "CFTEA": cftea,
+        "TNA": float(tna) if tna else None,
+        "TEA": float(tea) if tea else None,
+        "CFTEA": float(cftea) if cftea else None,
         "Sistema": sistema,
         "Tabla": tabla
-    })
+    }
+
+    return jsonify(response_data)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
