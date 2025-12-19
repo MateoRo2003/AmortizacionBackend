@@ -13,6 +13,7 @@ from scrapers.mp import MercadoPagoScraper
 from scrapers.naranjax import NaranjaXScraper
 from scrapers.santander import SantanderScraper
 from scrapers.patagonia import PatagoniaScraperOptimized
+from flask import Flask, request, jsonify, make_response
 
 app = Flask(__name__)
 
@@ -114,7 +115,14 @@ def health_check():
 # =========================
 @app.route("/api/calcular", methods=["POST", "OPTIONS"])
 def api_calcular():
-    data = request.json
+
+    # ✅ RESPUESTA CORRECTA A PREFLIGHT
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.status_code = 200
+        return response
+
+    data = request.get_json()
 
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
