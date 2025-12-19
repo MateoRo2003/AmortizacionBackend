@@ -6,7 +6,7 @@ import os
 # Importación de scrapers
 from scrapers.bbva import BBVAScraper
 from scrapers.bcra import BCRAScraper
-from scrapers.bna  import BNADestinoLibreScraper
+from scrapers.bna import BNADestinoLibreScraper
 from scrapers.galicia import GaliciaScraper
 from scrapers.macro_chrome import MacroScraper
 from scrapers.mp import MercadoPagoScraper
@@ -15,9 +15,17 @@ from scrapers.santander import SantanderScraper
 from scrapers.patagonia import PatagoniaScraperOptimized
 
 app = Flask(__name__)
-CORS(app, origins=["https://amortizacion-fronted.vercel.app"])
 
-# Scrapers
+# ✅ CORS BIEN CONFIGURADO
+CORS(
+    app,
+    resources={r"/*": {"origins": "https://amortizacion-fronted.vercel.app"}},
+    supports_credentials=True
+)
+
+# =========================
+# SCRAPERS
+# =========================
 scrapers_dict = {
     "Santander": SantanderScraper(),
     "BNA": BNADestinoLibreScraper(),
@@ -32,14 +40,16 @@ scrapers_dict = {
 
 TASAS_FILE = "tasas.json"
 
-# Funciones auxiliares
+# =========================
+# FUNCIONES AUXILIARES
+# =========================
 def cargar_tasas():
     if not os.path.exists(TASAS_FILE):
         return []
     try:
         with open(TASAS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return []
 
 def guardar_tasa_individual(banco, tna, tea, cftea):
@@ -59,7 +69,6 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna, sistema='frances'):
     tabla = []
 
     if sistema == 'frances':
-        # Sistema Francés: cuota constante
         cuota_fija = monto * i / (1 - (1 + i) ** -n_cuotas)
         saldo = monto
         for n in range(1, n_cuotas + 1):
@@ -74,7 +83,6 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna, sistema='frances'):
                 "Saldo": round(max(saldo, 0), 2)
             })
     else:
-        # Sistema Alemán: amortización constante
         amort_const = monto / n_cuotas
         saldo = monto
         for n in range(1, n_cuotas + 1):
@@ -88,12 +96,26 @@ def generar_tabla_amortizacion(monto, n_cuotas, tna, sistema='frances'):
                 "Amortizacion": round(amort_const, 2),
                 "Saldo": round(max(saldo, 0), 2)
             })
+
     return tabla
 
-# Endpoint principal
-@app.route("/api/calcular", methods=["POST"])
+# =========================
+# RUTA ROOT (ANTI-404)
+# =========================
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({
+        "status": "ok",
+        "service": "Amortizacion Backend"
+    })
+
+# =========================
+# ENDPOINT PRINCIPAL
+# =========================
+@app.route("/api/calcular", methods=["POST", "OPTIONS"])
 def api_calcular():
     data = request.json
+
     monto = float(data.get("monto", 0))
     n_cuotas = int(data.get("cuotas", 1))
     banco = data.get("banco")
@@ -115,9 +137,9 @@ def api_calcular():
         tna = tasas.get("TNA")
         tea = tasas.get("TEA")
         cftea = tasas.get("CFTEA")
+
         if tna:
-            # Asegurar que los valores sean numéricos
-            tna = float(tna) if tna else None
+            tna = float(tna)
             tea = float(tea) if tea else None
             cftea = float(cftea) if cftea else None
             guardar_tasa_individual(banco, tna, tea, cftea)
@@ -127,18 +149,18 @@ def api_calcular():
 
     tabla = generar_tabla_amortizacion(monto, n_cuotas, tna, sistema)
 
-    # Asegurar que todos los valores sean serializables
-    response_data = {
+    return jsonify({
         "Banco": banco,
-        "TNA": float(tna) if tna else None,
-        "TEA": float(tea) if tea else None,
-        "CFTEA": float(cftea) if cftea else None,
+        "TNA": tna,
+        "TEA": tea,
+        "CFTEA": cftea,
         "Sistema": sistema,
         "Tabla": tabla
-    }
+    })
 
-    return jsonify(response_data)
-
+# =========================
+# MAIN
+# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
